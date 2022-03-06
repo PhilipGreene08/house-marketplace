@@ -10,6 +10,7 @@ import {
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase.config';
 import visibilityIcon from '../assets/svg/visibilityIcon.svg';
+import { toast } from 'react-toastify';
 function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -59,7 +60,7 @@ function SignUp() {
       console.log(db);
       navigate('/');
     } catch (error) {
-      console.log(error);
+      toast.error('Please enter a valid name, email, and password to sign up');
     }
   };
 
