@@ -37,14 +37,15 @@ function Profile() {
         name: name,
         email: email,
       });
-      console.log(auth.currentUser);
-      const emailString = email.toString();
-      await updateEmail(auth.currentUser, emailString);
+
+      //if user email does not equal the email on the acct, update email in firebase
+      auth.currentUser.email !== email &&
+        (await updateEmail(auth.currentUser, email));
 
       toast.success('change complete');
     } catch (error) {
       console.log(error);
-      toast.error('Something went wrong');
+      toast.error('Something went wrong. Try logging out then logging back in');
     }
   };
 
