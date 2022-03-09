@@ -1,13 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import {
-  doc,
-  setDoc,
-  getDoc,
-  timeStamp,
-  serverTimestamp,
-} from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase.config';
 import { toast } from 'react-toastify';
 import googleIcon from '../assets/svg/googleIcon.svg';
@@ -24,11 +18,12 @@ function OAuth() {
       // The signed-in user info.
       const user = result.user;
       // This gives you a Google Access Token. You can use it to access the Google API.
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      const token = credential.accessToken;
+      //const credential = GoogleAuthProvider.credentialFromResult(result); //not needed
 
       //check for user in database
+      //doc checks db in Users for UserID
       const docRef = doc(db, 'users', user.uid);
+      //documentSnapShot = getDoc while referenceing user id
       const docSnap = await getDoc(docRef);
 
       //if user doesnt exist create user
