@@ -38,6 +38,7 @@ function Category() {
         let listings = [];
         querySnap.forEach((doc) => {
           console.log(doc.id, doc.data());
+          console.log(doc.id, ' => ', doc.data());
           return listings.push({ id: doc.id, data: doc.data() });
         });
 
@@ -56,7 +57,7 @@ function Category() {
     <div className='category'>
       <header>
         <p className='pageHeader'>
-          {params.categoryName == 'rent'
+          {params.categoryName === 'rent'
             ? 'Places for Rent'
             : 'Places for Sale'}
         </p>
