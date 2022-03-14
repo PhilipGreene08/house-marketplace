@@ -12,7 +12,7 @@ function ListingItem({ listing, id, onDelete }) {
         className='categoryListingLink'
       >
         <img
-          src={listing.imageUrls[0]}
+          src={listing.imgUrls}
           alt={listing.name}
           className='categoryListingImg'
         />
@@ -22,7 +22,9 @@ function ListingItem({ listing, id, onDelete }) {
           <p className='categoryListingPrice'>
             $
             {listing.offer
-              ? listing.discountedPrice.toLocaleString('en')
+              ? listing.discountedPrice
+                  .toString()
+                  .replace(/\B(?=(\d{3})+(?!\d))/g, ',')
               : listing.regularPrice}
             {listing.type === 'rent' && ' / Month'}
           </p>

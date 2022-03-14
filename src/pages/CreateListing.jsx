@@ -1,23 +1,24 @@
-import React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
-import Spinner from '../components/Spinner';
-import { toast } from 'react-toastify';
 import {
   getStorage,
   ref,
   uploadBytesResumable,
   getDownloadURL,
 } from 'firebase/storage';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase.config';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
+import Spinner from '../components/Spinner';
 
 function CreateListing() {
+  // eslint-disable-next-line
   const [geolocationEnabled, setGeolocationEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    type: 'sale',
+    type: 'rent',
     name: '',
     bedrooms: 1,
     bathrooms: 1,
@@ -31,10 +32,6 @@ function CreateListing() {
     latitude: 0,
     longitude: 0,
   });
-
-  const auth = getAuth();
-  const navigate = useNavigate();
-  const isMounted = useRef(true);
 
   const {
     type,
@@ -52,6 +49,10 @@ function CreateListing() {
     longitude,
   } = formData;
 
+  const auth = getAuth();
+  const navigate = useNavigate();
+  const isMounted = useRef(true);
+
   useEffect(() => {
     if (isMounted) {
       onAuthStateChanged(auth, (user) => {
@@ -62,34 +63,12 @@ function CreateListing() {
         }
       });
     }
+
     return () => {
       isMounted.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted]);
-
-  const onMutate = (e) => {
-    let boolean = null;
-
-    if (e.target.value === 'true') {
-      boolean = true;
-    }
-
-    if (e.target.value === 'false') {
-      boolean = false;
-    }
-
-    //files
-    if (e.target.files) {
-      setFormData((prevState) => ({ ...prevState, images: e.target.files }));
-    }
-    //text/boo/num
-    if (!e.target.files) {
-      setFormData((prevState) => ({
-        ...prevState,
-        [e.target.id]: boolean ?? e.target.value,
-      }));
-    }
-  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -104,7 +83,7 @@ function CreateListing() {
 
     if (images.length > 6) {
       setLoading(false);
-      toast.error('Only up to 6 images are allowed');
+      toast.error('Max 6 images');
       return;
     }
 
@@ -113,9 +92,11 @@ function CreateListing() {
 
     if (geolocationEnabled) {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=AIzaSyBgk4DXuiSuJY0VCDXJxEvf81VzqyqRKGE`
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${process.env.REACT_APP_GEOCODE_API_KEY}`
       );
+
       const data = await response.json();
+
       geolocation.lat = data.results[0]?.geometry.location.lat ?? 0;
       geolocation.lng = data.results[0]?.geometry.location.lng ?? 0;
 
@@ -132,15 +113,16 @@ function CreateListing() {
     } else {
       geolocation.lat = latitude;
       geolocation.lng = longitude;
-      location = address;
     }
 
-    //store images in firebase
+    // Store image in firebase
     const storeImage = async (image) => {
       return new Promise((resolve, reject) => {
         const storage = getStorage();
         const fileName = `${auth.currentUser.uid}-${image.name}-${uuidv4()}`;
+
         const storageRef = ref(storage, 'images/' + fileName);
+
         const uploadTask = uploadBytesResumable(storageRef, image);
 
         uploadTask.on(
@@ -156,12 +138,16 @@ function CreateListing() {
               case 'running':
                 console.log('Upload is running');
                 break;
+              default:
+                break;
             }
           },
           (error) => {
             reject(error);
           },
           () => {
+            // Handle successful uploads on complete
+            // For instance, get the download URL: https://firebasestorage.googleapis.com/...
             getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
               resolve(downloadURL);
             });
@@ -170,21 +156,61 @@ function CreateListing() {
       });
     };
 
-    const imageUrls = await Promise.all(
+    const imgUrls = await Promise.all(
       [...images].map((image) => storeImage(image))
     ).catch(() => {
       setLoading(false);
-      toast.error(`Images not uploaded`);
+      toast.error('Images not uploaded');
       return;
     });
 
-    console.log(imageUrls);
+    const formDataCopy = {
+      ...formData,
+      imgUrls,
+      geolocation,
+      timestamp: serverTimestamp(),
+    };
 
+    formDataCopy.location = address;
+    delete formDataCopy.images;
+    delete formDataCopy.address;
+    !formDataCopy.offer && delete formDataCopy.discountedPrice;
+
+    const docRef = await addDoc(collection(db, 'listings'), formDataCopy);
     setLoading(false);
+    toast.success('Listing saved');
+    navigate(`/category/${formDataCopy.type}/${docRef.id}`);
+  };
+
+  const onMutate = (e) => {
+    let boolean = null;
+
+    if (e.target.value === 'true') {
+      boolean = true;
+    }
+    if (e.target.value === 'false') {
+      boolean = false;
+    }
+
+    // Files
+    if (e.target.files) {
+      setFormData((prevState) => ({
+        ...prevState,
+        images: e.target.files,
+      }));
+    }
+
+    // Text/Booleans/Numbers
+    if (!e.target.files) {
+      setFormData((prevState) => ({
+        ...prevState,
+        [e.target.id]: boolean ?? e.target.value,
+      }));
+    }
   };
 
   if (loading) {
-    return <Spinner></Spinner>;
+    return <Spinner />;
   }
 
   return (
