@@ -58,7 +58,6 @@ function SignUp() {
       //updates data base and adds user
       await setDoc(doc(db, 'users', user.uid), formDataCopy);
 
-      console.log(db);
       navigate('/');
     } catch (error) {
       toast.error('Please enter a valid name, email, and password to sign up');
@@ -116,10 +115,10 @@ function SignUp() {
               </button>
             </div>
           </form>
-          <OAuth />
           <Link to='/sign-in' className='registerLink'>
             Sign In Instead
           </Link>
+          <OAuth />
         </main>
       </div>
     </>
