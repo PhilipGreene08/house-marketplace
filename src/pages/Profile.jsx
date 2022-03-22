@@ -1,15 +1,28 @@
 import React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getAuth, updateProfile, updateEmail } from 'firebase/auth';
 import { Link, useNavigate } from 'react-router-dom';
-import { updateDoc, doc } from 'firebase/firestore';
+import {
+  updateDoc,
+  doc,
+  collection,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  deleteDoc,
+} from 'firebase/firestore';
 import { db } from '../firebase.config';
 import { toast } from 'react-toastify';
 import arrowRight from '../assets/svg/keyboardArrowRightIcon.svg';
 import homeIcon from '../assets/svg/homeIcon.svg';
+import ListingItem from '../components/ListingItem';
+import { getStorage, ref, deleteObject } from 'firebase/storage';
 
 function Profile() {
   const auth = getAuth();
+  const [loading, setLoading] = useState(false);
+  const [listings, setListings] = useState(null);
   const [changeDetails, setChangeDetails] = useState(false);
   const [formData, setFormData] = useState({
     name: auth.currentUser.displayName,
@@ -18,6 +31,30 @@ function Profile() {
 
   const { name, email } = formData;
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchUserListings = async () => {
+      const listingsRef = collection(db, 'listings');
+      const q = query(
+        listingsRef,
+        where('userRef', '==', auth.currentUser.uid),
+        orderBy('timestamp', 'desc')
+      );
+
+      const querySnap = await getDocs(q);
+      const listings = [];
+      querySnap.forEach((doc) => {
+        return listings.push({
+          id: doc.id,
+          data: doc.data(),
+        });
+      });
+      setListings(listings);
+      setLoading(false);
+    };
+
+    fetchUserListings();
+  }, [auth.currentUser.uid]);
 
   const onLogout = () => {
     auth.signOut();
@@ -56,6 +93,33 @@ function Profile() {
       ...prevState,
       [e.target.id]: e.target.value,
     }));
+  };
+
+  const onDelete = async (listingId, listingUrls) => {
+    //console.log(listingId);
+
+    // const storage = getStorage();
+    // //console.log(storage);
+    // const deleteFileRef = ref(storage, `${listingUrls}`);
+    // console.log(deleteFileRef._location.path_);
+    // Create a reference to the file to delete
+
+    if (window.confirm(`Are you sure you want to delete this listing?`)) {
+      await deleteDoc(doc(db, 'listings', listingId));
+      // deleteObject(deleteFileRef)
+      //   .then(() => {
+      //     // File deleted successfully
+      //   })
+      //   .catch((error) => {
+      //     // Uh-oh, an error occurred!
+      //   });
+
+      const updatedListings = listings.filter(
+        (listing) => listing.id !== listingId
+      );
+      setListings(updatedListings);
+      toast.success(`Listing Deleted!`);
+    }
   };
 
   return (
@@ -105,6 +169,28 @@ function Profile() {
           <p>Sell or rent your home</p>
           <img src={arrowRight} alt='arrow right' />
         </Link>
+        {!loading && listings?.length > 0 && (
+          <>
+            <div className='listingText'>Your Listings</div>
+            <ul className='listingsList'>
+              {listings.map(
+                (listing) => (
+                  console.log(listing),
+                  (
+                    <ListingItem
+                      key={listing.id}
+                      listing={listing.data}
+                      id={listing.id}
+                      onDelete={() =>
+                        onDelete(listing.id, listing.data.imgUrls)
+                      }
+                    />
+                  )
+                )
+              )}
+            </ul>
+          </>
+        )}
       </main>
     </div>
   );
