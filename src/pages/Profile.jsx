@@ -96,23 +96,8 @@ function Profile() {
   };
 
   const onDelete = async (listingId, listingUrls) => {
-    //console.log(listingId);
-
-    // const storage = getStorage();
-    // //console.log(storage);
-    // const deleteFileRef = ref(storage, `${listingUrls}`);
-    // console.log(deleteFileRef._location.path_);
-    // Create a reference to the file to delete
-
     if (window.confirm(`Are you sure you want to delete this listing?`)) {
       await deleteDoc(doc(db, 'listings', listingId));
-      // deleteObject(deleteFileRef)
-      //   .then(() => {
-      //     // File deleted successfully
-      //   })
-      //   .catch((error) => {
-      //     // Uh-oh, an error occurred!
-      //   });
 
       const updatedListings = listings.filter(
         (listing) => listing.id !== listingId
@@ -120,6 +105,9 @@ function Profile() {
       setListings(updatedListings);
       toast.success(`Listing Deleted!`);
     }
+  };
+  const onEditFunction = (listingId) => {
+    navigate(`/edit-listing/${listingId}`);
   };
 
   return (
@@ -173,21 +161,15 @@ function Profile() {
           <>
             <div className='listingText'>Your Listings</div>
             <ul className='listingsList'>
-              {listings.map(
-                (listing) => (
-                  console.log(listing),
-                  (
-                    <ListingItem
-                      key={listing.id}
-                      listing={listing.data}
-                      id={listing.id}
-                      onDelete={() =>
-                        onDelete(listing.id, listing.data.imgUrls)
-                      }
-                    />
-                  )
-                )
-              )}
+              {listings.map((listing) => (
+                <ListingItem
+                  key={listing.id}
+                  listing={listing.data}
+                  id={listing.id}
+                  onDelete={() => onDelete(listing.id, listing.data.imgUrls)}
+                  onEdit={() => onEditFunction(listing.id)}
+                />
+              ))}
             </ul>
           </>
         )}
